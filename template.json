@@ -1,0 +1,76 @@
+{
+  "$note": "Build sheet. spec.py is the executable source of truth; this mirrors it with rationale.",
+  "name": "Paperclip (Official Image)",
+  "upstream": {
+    "repo": "paperclipai/paperclip",
+    "release": "v2026.916.1",
+    "image": "ghcr.io/paperclipai/paperclip:2026.916.1",
+    "$note": "Official image; tag 2026.916.1 == :latest digest sha256:a02ac35a... on 2026-09-26. Entrypoint already chowns root-owned Railway volumes."
+  },
+  "workspaces": {
+    "source_project": "My Projects (a351c29a-41e6-422d-be6e-566b094b4f02)",
+    "template": "Auromations",
+    "$note": "Auromations Stripe subscription UNPAID on 2026-09-26 blocked projectCreate ('Your trial has expired'). templateUpsertConfig accepts any workspaceId, so only the template lives in Auromations."
+  },
+  "services": {
+    "Postgres": {
+      "image": "ghcr.io/railwayapp-templates/postgres-ssl:17",
+      "volume": "/var/lib/postgresql/data",
+      "variables": {
+        "POSTGRES_DB": "railway",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "${{ secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\") }}",
+        "PGDATA": "/var/lib/postgresql/data/pgdata",
+        "PGHOST": "${{RAILWAY_PRIVATE_DOMAIN}}",
+        "PGPORT": "5432",
+        "PGUSER": "${{POSTGRES_USER}}",
+        "PGPASSWORD": "${{POSTGRES_PASSWORD}}",
+        "PGDATABASE": "${{POSTGRES_DB}}",
+        "SSL_CERT_DAYS": "820",
+        "DATABASE_URL": "postgresql://${{PGUSER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{PGDATABASE}}",
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": "60"
+      }
+    },
+    "Paperclip": {
+      "image": "ghcr.io/paperclipai/paperclip:2026.916.1",
+      "volume": "/paperclip",
+      "domain_target_port": 3100,
+      "deploy": {
+        "startCommand": null,
+        "healthcheckPath": "/api/health",
+        "healthcheckTimeout": 300,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "variables": {
+        "PORT": "3100",
+        "DATABASE_URL": "${{Postgres.DATABASE_URL}}",
+        "PAPERCLIP_DEPLOYMENT_MODE": "authenticated",
+        "PAPERCLIP_DEPLOYMENT_EXPOSURE": "private",
+        "PAPERCLIP_AUTH_RATE_LIMIT_ENABLED": "true",
+        "PAPERCLIP_PUBLIC_URL": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+        "PAPERCLIP_MIGRATION_AUTO_APPLY": "true",
+        "BETTER_AUTH_SECRET": "${{secret(64)}}",
+        "PAPERCLIP_TOOL_ACTION_SIGNING_SECRET": "${{secret(64)}}",
+        "PAPERCLIP_AGENT_JWT_SECRET": "${{secret(64)}}"
+      },
+      "$note": [
+        "exposure=private (image default) on purpose: Haseeb chose the browser 'Claim this instance' UX (POST /api/bootstrap/claim, first signed-in user becomes instance admin) over public mode's one-time CLI invite. Tradeoff: unclaimed window on a public URL; listing tells deployers to claim immediately.",
+        "The public-mode variant (bootstrap-ceo via tsx in /app/cli + printenv'd CLI config in a start command) was built and passed 10/10 on 2026-09-28; see git history if ever wanted.",
+        "PAPERCLIP_AUTH_RATE_LIMIT_ENABLED=true: private mode defaults it off.",
+        "No start command: image ENTRYPOINT (tini + docker-entrypoint.sh, chowns root-owned volume, gosu node) runs as-is.",
+        "HOST=:: was ignored (banner: bind lan 0.0.0.0) and the edge reaches 0.0.0.0 fine, so no HOST override."
+      ]
+    }
+  },
+  "verified": {
+    "template": "paperclip-official-1",
+    "journey": "test/journey.sh 11/11 on fresh stranger deploy; UI walk: setup screen -> create account -> Claim this instance -> onboarding"
+  },
+  "published": {
+    "url": "https://railway.com/deploy/paperclip-official-1",
+    "templateId": "dae7b86e-7cdb-4d30-a4c3-1342684fb4e6",
+    "workspace": "Auromations",
+    "$note": "First publish minted /deploy/paperclip-agent-teams (upsertConfig did not rename); re-minted and old template deleted."
+  }
+}
