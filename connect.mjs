@@ -22,17 +22,18 @@ const CODEX_TTL_MS = 15 * 60 * 1000;
 const log = (...a) => console.log("[connect]", ...a);
 
 // Preload for Paperclip's own process (written by `connect.mjs --write-patch <file>`, loaded with
-// node --import). `claude setup-token` tokens are inference-only: Anthropic's usage endpoint,
-// which Paperclip calls to verify a Claude subscription, answers 403 (valid token, no profile
-// scope) where a bad token gets 401. For setup tokens only, turn that 403 into "no usage data"
-// so Paperclip accepts them; every other request and status passes through untouched.
+// node --import). Paperclip verifies a Claude subscription by calling Anthropic's usage endpoint.
+// For `claude setup-token` tokens that endpoint is no gate: they are inference-only, so it answers
+// 403 (no profile scope), and it rate limits hard (429 seen after a handful of calls). Only 401
+// means a bad token. For setup tokens only, any other failure becomes "no usage data" so Paperclip
+// accepts the token; every other request and status passes through untouched.
 const USAGE_PATCH = `const f = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const res = await f(input, init);
   try {
     const url = typeof input === "string" ? input : input.url || String(input);
     const auth = new Headers((init && init.headers) || (input && input.headers) || {}).get("authorization") || "";
-    if (res.status === 403 && url.startsWith("https://api.anthropic.com/api/oauth/usage") && auth.startsWith("Bearer sk-ant-oat"))
+    if (!res.ok && res.status !== 401 && url.startsWith("https://api.anthropic.com/api/oauth/usage") && auth.startsWith("Bearer sk-ant-oat"))
       return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
   } catch {}
   return res;
@@ -127,8 +128,8 @@ async function saveClaude(token) {
     headers: { authorization: `Bearer ${token}`, "anthropic-beta": "oauth-2025-04-20" },
     signal: AbortSignal.timeout(15000),
   }).catch(() => null);
-  // 403 = valid setup token without profile scope (see USAGE_PATCH); 401 = bad token.
-  if (!r || !(r.ok || r.status === 403)) return { ok: false, error: `Anthropic rejected the token (${r ? r.status : "network error"}).` };
+  // Only 401 means a bad token; 403 (no profile scope) and 429/5xx are expected (see USAGE_PATCH).
+  if (r && r.status === 401) return { ok: false, error: "Anthropic rejected the token. Run claude setup-token again and paste the new one." };
   fs.mkdirSync(path.dirname(TOKEN_FILE), { recursive: true, mode: 0o700 });
   fs.writeFileSync(TOKEN_FILE, token, { mode: 0o600 });
   return { ok: true };
