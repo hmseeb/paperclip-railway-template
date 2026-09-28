@@ -39,7 +39,7 @@ Claim it right away. Until someone claims it, the first signed-in user on the UR
 
 Paperclip's subscription sign-in normally asks you to run a command on the server. This template adds a small page at `https://<your-app>/connect` (instance admin only) that does it for you:
 
-- **Claude subscription:** run `claude setup-token` on your own computer, paste the `sk-ant-oat...` token on `/connect` and save. Then in Paperclip choose Claude, Subscription, and click Connect. The token is checked with Anthropic before it is saved and stays on your volume.
+- **Claude subscription:** run `claude setup-token` on your own computer, paste the `sk-ant-oat...` token on `/connect` and save. Then in Paperclip choose Claude, Subscription, and click Connect. The token stays on your volume. Usage bars are not shown for setup-token connections.
 - **Codex (ChatGPT subscription):** in Paperclip choose Codex, Subscription. Within a few seconds `/connect` shows a link and a one-time code. Open the link, enter the code, approve, and Paperclip connects on its own.
 - **API keys:** in Paperclip's Connect step, click **Use API key instead** under the provider tile and paste the key. No `/connect` needed.
 
