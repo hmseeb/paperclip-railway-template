@@ -59,8 +59,18 @@ PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.
 # unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
 START_COMMAND = (
     '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'
-    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs; '
+    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs /tmp/claude-launcher; '
     '(while true; do node /tmp/connect.mjs; sleep 2; done) & '
+    # Newest Claude Code on the volume, installed in the background each boot: new models
+    # need new CLIs (Opus 5.5 needs >=2.1.280; image shipped 2.1.278) and the image's CLI is
+    # root-owned, so it cannot self-update. PATH prefers it once present, else the image's.
+    '(npm i -g --prefix /paperclip/.cli @anthropic-ai/claude-code@latest > /tmp/cli-update.log 2>&1 '
+    '&& echo [cli] claude updated: $(/paperclip/.cli/bin/claude --version) || echo [cli] claude update failed, see /tmp/cli-update.log) & '
+    # Agents run Claude Code through Paperclip's bundled Agent SDK binary (2.1.263 in 2026.916.1),
+    # whose env allowlist drops CLAUDE_CODE_EXECUTABLE, so point the bundled binary itself at the
+    # launcher. /app is node-owned and container-local: redone on every boot.
+    'for f in /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-linux-*/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude; do ln -sf /tmp/claude-launcher $f; done; '
+    'export PATH=/paperclip/.cli/bin:$PATH; '
     'exec node --import /tmp/usage-patch.mjs --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
 )
 

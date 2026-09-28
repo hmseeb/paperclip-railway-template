@@ -39,7 +39,18 @@ globalThis.fetch = async (input, init) => {
   return res;
 };
 `;
-if (process.argv[2] === "--write-patch") { fs.writeFileSync(process.argv[3], USAGE_PATCH); process.exit(0); }
+// Launcher for Paperclip's Claude agents (claude-agent-acp honours CLAUDE_CODE_EXECUTABLE). Its
+// bundled Claude Code lags new models; prefer the copy the boot script keeps updated on the
+// volume, else the image's global CLI (also newer than the bundled one).
+const CLAUDE_LAUNCHER = `#!/bin/sh
+[ -x /paperclip/.cli/bin/claude ] && exec /paperclip/.cli/bin/claude "$@"
+exec /usr/local/bin/claude "$@"
+`;
+if (process.argv[2] === "--write-patch") {
+  fs.writeFileSync(process.argv[3], USAGE_PATCH);
+  if (process.argv[4]) fs.writeFileSync(process.argv[4], CLAUDE_LAUNCHER, { mode: 0o755 });
+  process.exit(0);
+}
 
 // ---- login folder watcher -------------------------------------------------------------
 const codex = new Map(); // dir id -> { code, status, startedAt, child }

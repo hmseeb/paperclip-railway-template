@@ -45,6 +45,8 @@ Paperclip's subscription sign-in normally asks you to run a command on the serve
 
 The Claude Code, Codex, OpenCode, Gemini and Kimi CLIs are already installed in the image.
 
+**Newest Claude models:** on every boot the template installs the latest Claude Code onto your volume and points Paperclip's agents at it, so new Claude models work as soon as Anthropic ships them. If a new model is not in Paperclip's model list yet, type its full ID (for example `claude-opus-5-5`) in the Model box, choose **Use manual model**, and save.
+
 **Variables you might change**
 
 | Variable | Default | Notes |
