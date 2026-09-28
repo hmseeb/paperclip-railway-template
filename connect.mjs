@@ -21,6 +21,25 @@ const CODEX_URL = "https://auth.openai.com/codex/device";
 const CODEX_TTL_MS = 15 * 60 * 1000;
 const log = (...a) => console.log("[connect]", ...a);
 
+// Preload for Paperclip's own process (written by `connect.mjs --write-patch <file>`, loaded with
+// node --import). `claude setup-token` tokens are inference-only: Anthropic's usage endpoint,
+// which Paperclip calls to verify a Claude subscription, answers 403 (valid token, no profile
+// scope) where a bad token gets 401. For setup tokens only, turn that 403 into "no usage data"
+// so Paperclip accepts them; every other request and status passes through untouched.
+const USAGE_PATCH = `const f = globalThis.fetch;
+globalThis.fetch = async (input, init) => {
+  const res = await f(input, init);
+  try {
+    const url = typeof input === "string" ? input : input.url || String(input);
+    const auth = new Headers((init && init.headers) || (input && input.headers) || {}).get("authorization") || "";
+    if (res.status === 403 && url.startsWith("https://api.anthropic.com/api/oauth/usage") && auth.startsWith("Bearer sk-ant-oat"))
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+  } catch {}
+  return res;
+};
+`;
+if (process.argv[2] === "--write-patch") { fs.writeFileSync(process.argv[3], USAGE_PATCH); process.exit(0); }
+
 // ---- login folder watcher -------------------------------------------------------------
 const codex = new Map(); // dir id -> { code, status, startedAt, child }
 let claudeFilled = null; // last time a Claude login folder was filled
@@ -104,12 +123,12 @@ async function saveClaude(token) {
   token = token.trim();
   if (!token) { fs.rmSync(TOKEN_FILE, { force: true }); return { ok: true, removed: true }; }
   if (!/^sk-ant-oat\d*-/.test(token)) return { ok: false, error: "That does not look like a setup token. Run claude setup-token and paste the sk-ant-oat... value." };
-  // The same check Paperclip runs before it accepts a Claude subscription.
   const r = await fetch("https://api.anthropic.com/api/oauth/usage", {
     headers: { authorization: `Bearer ${token}`, "anthropic-beta": "oauth-2025-04-20" },
     signal: AbortSignal.timeout(15000),
   }).catch(() => null);
-  if (!r || !r.ok) return { ok: false, error: `Anthropic rejected the token (${r ? r.status : "network error"}).` };
+  // 403 = valid setup token without profile scope (see USAGE_PATCH); 401 = bad token.
+  if (!r || !(r.ok || r.status === 403)) return { ok: false, error: `Anthropic rejected the token (${r ? r.status : "network error"}).` };
   fs.mkdirSync(path.dirname(TOKEN_FILE), { recursive: true, mode: 0o700 });
   fs.writeFileSync(TOKEN_FILE, token, { mode: 0o600 });
   return { ok: true };

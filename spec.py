@@ -59,9 +59,9 @@ PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.
 # unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
 START_COMMAND = (
     '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'
-    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && '
+    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs; '
     '(while true; do node /tmp/connect.mjs; sleep 2; done) & '
-    'exec node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
+    'exec node --import /tmp/usage-patch.mjs --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
 )
 
 PAPERCLIP_DEPLOY = {
