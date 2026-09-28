@@ -3,7 +3,7 @@
 # Proves: sign-up alone gives no admin, browser claim -> instance admin, company create +
 # read back, second visitor cannot claim or read the owner's company, SPA served.
 set -eu
-U=$1; J=$(mktemp -d)
+U=$1; J=${JOURNEY_DIR:-$(mktemp -d)}  # JOURNEY_DIR keeps the admin cookie jar ($J/a) for follow-up tests
 H="-H Content-Type:application/json -H Origin:$U"
 pass(){ echo "PASS $*"; }; fail(){ echo "FAIL $*"; exit 1; }
 curl -fsS "$U/api/health" | grep -q '"bootstrapStatus":"bootstrap_pending"' && pass "pending before claim" || fail "not pending"

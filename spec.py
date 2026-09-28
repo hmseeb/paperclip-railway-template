@@ -1,6 +1,8 @@
 """Single source of truth for the Paperclip template's services.
 build_source.py writes it to the live source project; repair.py writes it into the template.
 """
+import pathlib
+
 # Official upstream image, digest of tag 2026.916.1 (== :latest on 2026-09-26).
 IMAGE = "ghcr.io/paperclipai/paperclip:2026.916.1"
 PG_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:17"
@@ -24,8 +26,11 @@ PG_VARS = {
 PAPERCLIP_VARS = {
     # No HOST override: the server maps bind to lan (0.0.0.0) regardless (verified in the
     # boot banner with HOST=::), and the public edge + healthcheck reach it fine.
-    # Railway healthchecks the injected PORT (default 8080); pin the image's real port.
-    "PORT": "3100",
+    # Paperclip listens on PORT=3101 (Railway healthchecks PORT, so /api/health hits Paperclip
+    # directly). The /connect helper (connect.mjs) listens on 3100, the domain's target port,
+    # and proxies everything except /connect to Paperclip, websockets included.
+    "PORT": "3101",
+    "CONNECT_PORT": "3100",
     "DATABASE_URL": "${{Postgres.DATABASE_URL}}",
     # private (image default) keeps the browser "Claim this instance" first-admin flow:
     # the first signed-in visitor claims admin. Chosen for UX over public's CLI invite;
@@ -47,9 +52,20 @@ PAPERCLIP_VARS = {
     "PAPERCLIP_AGENT_JWT_SECRET": "${{secret(64)}}",
 }
 
+PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.mjs").read_text()
+
+# Railway discards the image ENTRYPOINT, so tini + docker-entrypoint.sh (volume chown, gosu to
+# node) are called explicitly. The helper ships in a variable to keep the official image
+# unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
+START_COMMAND = (
+    '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'
+    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && '
+    '(while true; do node /tmp/connect.mjs; sleep 2; done) & '
+    'exec node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
+)
+
 PAPERCLIP_DEPLOY = {
-    # None: image ENTRYPOINT (tini + docker-entrypoint.sh chowns the volume) + CMD.
-    "startCommand": None,
+    "startCommand": START_COMMAND,
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
