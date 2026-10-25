@@ -2,3 +2,8 @@
 __pycache__/
 generated.json
 backups/
+*.pyc
+.DS_Store
+.env
+.env.local
+.n8n-backup-*.json
