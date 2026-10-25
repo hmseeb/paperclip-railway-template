@@ -4,7 +4,7 @@ Paperclip is an open-source control plane for running a company staffed by AI ag
 
 ## About Hosting Paperclip
 
-This template runs the official `ghcr.io/paperclipai/paperclip` image (release 2026.916.1, no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
+This template runs the official `ghcr.io/paperclipai/paperclip` image (release 2026.1023.0, no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
 
 It boots in `authenticated` mode with `private` exposure, so every page needs a login, and the first admin is claimed straight from the browser. No CLI and no setup tokens.
 
@@ -37,7 +37,7 @@ Claim it right away. Until someone claims it, the first signed-in user on the UR
 
 **Connecting agents (no terminal needed)**
 
-Paperclip's subscription sign-in normally asks you to run a command on the server. This template adds a small page at `https://<your-app>/connect` (instance admin only) that does it for you:
+Paperclip's subscription sign-in normally asks you to run a command on the server. This template adds a small page at `https://your-app.up.railway.app/connect` (instance admin only) that does it for you:
 
 - **Claude subscription:** run `claude setup-token` on your own computer, paste the `sk-ant-oat...` token on `/connect` and save. Then in Paperclip choose Claude, Subscription, and click Connect. The token stays on your volume. Usage bars are not shown for setup-token connections.
 - **Codex (ChatGPT subscription):** in Paperclip choose Codex, Subscription. Within a few seconds `/connect` shows a link and a one-time code. Open the link, enter the code, approve, and Paperclip connects on its own.
@@ -51,7 +51,7 @@ The Claude Code, Codex, OpenCode, Gemini and Kimi CLIs are already installed in 
 
 | Variable | Default | Notes |
 |---|---|---|
-| `PAPERCLIP_PUBLIC_URL` | `https://<railway domain>` | Set it to your custom domain after adding one |
+| `PAPERCLIP_PUBLIC_URL` | `https://` + your Railway domain | Set it to your custom domain after adding one |
 | `PAPERCLIP_AUTH_DISABLE_SIGN_UP` | unset | Set to `true` to close open sign-ups once your team has joined |
 | `HEARTBEAT_SCHEDULER_ENABLED` | `true` | Set to `false` to pause every agent heartbeat at once |
 

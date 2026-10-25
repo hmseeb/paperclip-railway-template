@@ -3,8 +3,9 @@ build_source.py writes it to the live source project; repair.py writes it into t
 """
 import pathlib
 
-# Official upstream image, digest of tag 2026.916.1 (== :latest on 2026-09-26).
-IMAGE = "ghcr.io/paperclipai/paperclip:2026.916.1"
+# Official upstream image, release v2026.1023.0 (latest stable on 2026-10-25). Start-command
+# dependencies (tini, docker-entrypoint.sh, server paths, SDK/codex binary globs) checked identical.
+IMAGE = "ghcr.io/paperclipai/paperclip:2026.1023.0"
 PG_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:17"
 
 PG_VARS = {
@@ -59,17 +60,19 @@ PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.
 # unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
 START_COMMAND = (
     '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'
-    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs /tmp/claude-launcher; '
+    'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs; '
     '(while true; do node /tmp/connect.mjs; sleep 2; done) & '
-    # Newest Claude Code on the volume, installed in the background each boot: new models
+    # Newest Claude Code + Codex on the volume, installed in the background each boot: new models
     # need new CLIs (Opus 5.5 needs >=2.1.280; image shipped 2.1.278) and the image's CLI is
     # root-owned, so it cannot self-update. PATH prefers it once present, else the image's.
-    '(npm i -g --prefix /paperclip/.cli @anthropic-ai/claude-code@latest > /tmp/cli-update.log 2>&1 '
-    '&& echo [cli] claude updated: $(/paperclip/.cli/bin/claude --version) || echo [cli] claude update failed, see /tmp/cli-update.log) & '
-    # Agents run Claude Code through Paperclip's bundled Agent SDK binary (2.1.263 in 2026.916.1),
+    '(npm i -g --prefix /paperclip/.cli @anthropic-ai/claude-code@latest @openai/codex@latest > /tmp/cli-update.log 2>&1 '
+    '&& echo [cli] updated: $(/paperclip/.cli/bin/claude --version), $(/paperclip/.cli/bin/codex --version) || echo [cli] update failed, see /tmp/cli-update.log) & '
+    # Agents run Claude Code through Paperclip's bundled Agent SDK binary (2.1.263 in 2026.916.1; SDK 0.3.286 in 2026.1012.0 and 2026.1023.0),
     # whose env allowlist drops CLAUDE_CODE_EXECUTABLE, so point the bundled binary itself at the
     # launcher. /app is node-owned and container-local: redone on every boot.
     'for f in /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-linux-*/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude; do ln -sf /tmp/claude-launcher $f; done; '
+    # Codex agents: codex-acp runs @openai/codex's vendored binary (0.153.4 in 2026.916.1, 0.160.0 in 2026.1012.0 and 2026.1023.0).
+    'for f in /app/node_modules/.pnpm/@openai+codex@*-linux-*/node_modules/@openai/codex/vendor/*/bin/codex; do ln -sf /tmp/codex-launcher $f; done; '
     'export PATH=/paperclip/.cli/bin:$PATH; '
     'exec node --import /tmp/usage-patch.mjs --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
 )

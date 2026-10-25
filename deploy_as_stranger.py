@@ -11,7 +11,7 @@ import time
 sys.path.insert(0, str(pathlib.Path("~/.claude/skills/create-template-for-railway/scripts").expanduser()))
 import rw  # noqa: E402
 
-TEMPLATE_ID = "dae7b86e-7cdb-4d30-a4c3-1342684fb4e6"
+TEMPLATE_ID = sys.argv[1] if len(sys.argv) > 1 else "dae7b86e-7cdb-4d30-a4c3-1342684fb4e6"  # optional: scratch template id
 WORKSPACE_ID = "d10da65a-297f-4ba4-8cef-2fa9bb45fdef"  # My Projects: Auromations cannot create projects while billing is UNPAID
 
 config = rw.gql(

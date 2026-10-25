@@ -39,16 +39,17 @@ globalThis.fetch = async (input, init) => {
   return res;
 };
 `;
-// Launcher for Paperclip's Claude agents (claude-agent-acp honours CLAUDE_CODE_EXECUTABLE). Its
-// bundled Claude Code lags new models; prefer the copy the boot script keeps updated on the
-// volume, else the image's global CLI (also newer than the bundled one).
-const CLAUDE_LAUNCHER = `#!/bin/sh
-[ -x /paperclip/.cli/bin/claude ] && exec /paperclip/.cli/bin/claude "$@"
-exec /usr/local/bin/claude "$@"
+// Launchers for Paperclip's agents. Its bundled Claude Agent SDK and Codex binaries lag new
+// models (Opus 5.5 needs Claude Code >=2.1.280; bundled 2.1.263) and its env allowlist drops
+// CLAUDE_CODE_EXECUTABLE / CODEX_PATH, so the boot script symlinks the bundled binaries to these.
+// Each prefers the copy kept updated on the volume, else the image's global CLI.
+const launcher = (name) => `#!/bin/sh
+[ -x /paperclip/.cli/bin/${name} ] && exec /paperclip/.cli/bin/${name} "$@"
+exec /usr/local/bin/${name} "$@"
 `;
 if (process.argv[2] === "--write-patch") {
   fs.writeFileSync(process.argv[3], USAGE_PATCH);
-  if (process.argv[4]) fs.writeFileSync(process.argv[4], CLAUDE_LAUNCHER, { mode: 0o755 });
+  for (const name of ["claude", "codex"]) fs.writeFileSync(`/tmp/${name}-launcher`, launcher(name), { mode: 0o755 });
   process.exit(0);
 }
 

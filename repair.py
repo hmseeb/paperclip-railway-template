@@ -10,13 +10,13 @@ Usage: repair.py <templateId|new> [generated.json]
 import json, pathlib, sys, uuid
 sys.path.insert(0, str(pathlib.Path("~/.claude/skills/create-template-for-railway/scripts").expanduser()))
 import rw  # noqa: E402
-from spec import PAPERCLIP_VARS, PG_VARS, PAPERCLIP_DEPLOY  # noqa: E402
+from spec import IMAGE, PG_IMAGE, PAPERCLIP_VARS, PG_VARS, PAPERCLIP_DEPLOY  # noqa: E402
 
 WORKSPACE = "fc4796db-2c6c-4354-a564-d4a1d900af53"  # Auromations
 NAME = "Paperclip (Official Image)"
 ICONS = {
     # 512px PNG pinned to the release tag, verified image/png.
-    "Paperclip": "https://raw.githubusercontent.com/paperclipai/paperclip/v2026.916.1/ui/public/android-chrome-512x512.png",
+    "Paperclip": f"https://raw.githubusercontent.com/paperclipai/paperclip/v{IMAGE.rsplit(':', 1)[1]}/ui/public/android-chrome-512x512.png",
     "Postgres": "https://devicons.railway.app/i/postgresql.svg",
 }
 DESCRIPTIONS = {
@@ -32,6 +32,7 @@ def as_vars(values):
 
 VARIABLES = {"Paperclip": as_vars(PAPERCLIP_VARS), "Postgres": as_vars(PG_VARS)}
 DEPLOY = {"Paperclip": PAPERCLIP_DEPLOY}
+IMAGES = {"Paperclip": IMAGE, "Postgres": PG_IMAGE}
 
 
 def main():
@@ -42,9 +43,11 @@ def main():
     if template_id != "new":
         # Updating: start from the template's own config; the generated one carries source
         # service ids, which the server rejects as "ID collision".
-        config = rw.gql("query($id: String!) { template(id: $id) { serializedConfig } }",
-                        {"id": template_id})["template"]["serializedConfig"]
+        live = rw.gql("query($id: String!) { template(id: $id) { serializedConfig canvasConfig } }",
+                      {"id": template_id})["template"]
+        config, canvas = live["serializedConfig"], live["canvasConfig"]
     else:
+        canvas = {}
         template_id = str(uuid.uuid4())
         remap = {sid: str(uuid.uuid4()) for sid in config["services"]}
         services = {}
@@ -58,11 +61,12 @@ def main():
         name = svc["name"]
         svc["variables"] = VARIABLES[name]
         svc["icon"] = ICONS[name]
+        svc.setdefault("source", {})["image"] = IMAGES[name]
         svc.setdefault("deploy", {}).update({k: v for k, v in DEPLOY.get(name, {}).items()})
     saved = rw.gql("""mutation($id: String!, $input: TemplateUpsertConfigInput!) {
         templateUpsertConfig(id: $id, input: $input) { id code } }""",
         {"id": template_id, "input": {"name": NAME, "workspaceId": WORKSPACE,
-                                      "serializedConfig": config, "canvasConfig": {}}},
+                                      "serializedConfig": config, "canvasConfig": canvas}},
         internal=True)["templateUpsertConfig"]
     print(f"saved id {saved['id']} code {saved['code']}")
 
@@ -79,6 +83,8 @@ def main():
         for key, val in DEPLOY.get(name, {}).items():
             if svc.get("deploy", {}).get(key) != val:
                 problems.append(f"{name}.deploy.{key}: {svc.get('deploy', {}).get(key)!r}")
+        if svc.get("source", {}).get("image") != IMAGES[name]:
+            problems.append(f"{name}.source.image: {svc.get('source')}")
         if svc.get("icon") != ICONS[name]:
             problems.append(f"{name}.icon")
         if name == "Paperclip" and "3100" not in json.dumps(svc.get("networking")):

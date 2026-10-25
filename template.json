@@ -3,9 +3,9 @@
   "name": "Paperclip (Official Image)",
   "upstream": {
     "repo": "paperclipai/paperclip",
-    "release": "v2026.916.1",
-    "image": "ghcr.io/paperclipai/paperclip:2026.916.1",
-    "$note": "Official image; tag 2026.916.1 == :latest digest sha256:a02ac35a... on 2026-09-26. Entrypoint already chowns root-owned Railway volumes."
+    "release": "v2026.1023.0",
+    "image": "ghcr.io/paperclipai/paperclip:2026.1023.0",
+    "$note": "Official image. Bumped 2026.916.1 -> 2026.1023.0 on 2026-10-25 (published config was 916.1; 1012.0 was never published). Breaking changes across 1001.0-1023.0 (Composio broker retired, full-auto harness default, UI snippet removal, mention-no-run, SQLite lock protocol, strict tool grants, wider Operator preset, GitHub review bots behind a flag) touch none of our variables, the /paperclip volume, port 3100/3101 or the start command. Railway stops the old container before starting the new one on a volume-backed service, which satisfies 1012.0's stop-old-before-upgrade lock rule. Upgrade verified 2026-10-25: a 916.1 deploy with a claimed admin, company, agent, issue and encrypted secret bumped to 1023.0 in place, migrations 0306-0333 applied, all data read back, launcher symlinks still resolve. Entrypoint still chowns root-owned Railway volumes."
   },
   "workspaces": {
     "source_project": "My Projects (a351c29a-41e6-422d-be6e-566b094b4f02)",
@@ -32,7 +32,7 @@
       }
     },
     "Paperclip": {
-      "image": "ghcr.io/paperclipai/paperclip:2026.916.1",
+      "image": "ghcr.io/paperclipai/paperclip:2026.1023.0",
       "volume": "/paperclip",
       "domain_target_port": 3100,
       "deploy": {
