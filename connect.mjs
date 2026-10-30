@@ -14,6 +14,10 @@ import { spawn } from "node:child_process";
 
 const LISTEN = Number(process.env.CONNECT_PORT || 3100);
 const UPSTREAM = Number(process.env.PORT || 3101);
+// Agent computer's live screen (host:port of its gateway), served on Paperclip's own address under
+// /_computer/ so people's browsers need no second domain. Unset: everything goes to Paperclip.
+const LIVE_SCREEN = (process.env.COMPUTER_GATEWAY || "").match(/^\[?([^\]]+?)\]?:(\d+)$/);
+const upstreamFor = (url) => (LIVE_SCREEN && url.startsWith("/_computer/") ? { host: LIVE_SCREEN[1], port: Number(LIVE_SCREEN[2]) } : { host: "127.0.0.1", port: UPSTREAM });
 const HOME = process.env.PAPERCLIP_HOME || "/paperclip";
 const LOGINS = path.join(HOME, "instances", process.env.PAPERCLIP_INSTANCE_ID || "default", "ai-local-logins");
 const TOKEN_FILE = path.join(HOME, "connect", "claude-token");
@@ -260,10 +264,11 @@ const server = http.createServer((req, res) => {
   if (req.url === "/connect" || req.url.startsWith("/connect/") || req.url.startsWith("/connect?")) {
     return handleConnect(req, res).catch((e) => { log(e); send(res, 500, "text/plain", "connect helper error"); });
   }
-  const page = req.method === "GET" && (req.headers.accept || "").includes("text/html");
+  const to = upstreamFor(req.url);
+  const page = to.port === UPSTREAM && req.method === "GET" && (req.headers.accept || "").includes("text/html");
   const headers = { ...req.headers };
   if (page) delete headers["accept-encoding"]; // uncompressed HTML so the script tag can be added
-  const up = http.request({ host: "127.0.0.1", port: UPSTREAM, method: req.method, path: req.url, headers }, (r) => {
+  const up = http.request({ ...to, method: req.method, path: req.url, headers }, (r) => {
     if (!page || !(r.headers["content-type"] || "").startsWith("text/html")) {
       res.writeHead(r.statusCode, r.rawHeaders);
       return r.pipe(res);
@@ -282,7 +287,8 @@ const server = http.createServer((req, res) => {
   req.pipe(up);
 });
 server.on("upgrade", (req, socket, head) => {
-  const up = net.connect(UPSTREAM, "127.0.0.1", () => {
+  const to = upstreamFor(req.url);
+  const up = net.connect(to.port, to.host, () => {
     let raw = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
     for (let i = 0; i < req.rawHeaders.length; i += 2) raw += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
     up.write(raw + "\r\n");
