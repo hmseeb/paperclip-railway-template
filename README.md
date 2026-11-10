@@ -79,7 +79,7 @@ Paperclip asks how the agent signs in to a model. Pick one of the three options 
 
 ![OpenAI subscription sign-in](docs/screenshots/11-openai-subscription.png)
 
-Use the code that Paperclip shows. The template's older `/connect` page can show a different Codex code. Do not use that one.
+Use the code that Paperclip shows. On deploys made before 2026-11-10, the template's old `/connect` page can show a second Codex code. Do not use that one.
 
 ### 6. Give the agent a task
 
@@ -135,7 +135,7 @@ Migrations apply on boot (`PAPERCLIP_MIGRATION_AUTO_APPLY=true`). Railway stops 
 | Agent fails to start | The agent has no model connection. | Connect one in the agent's settings (step 5). |
 | Claude subscription stops working after some hours (401) | The agent uses a normal Claude login that expired. | Connect again with option B. It makes a long-lived setup token. |
 | Code box says the code is wrong or expired | Each code works once and for a few minutes. | Click **Start sign-in again** and use the new link. |
-| Two different Codex codes (Paperclip and `/connect`) | The older `/connect` helper also starts a sign-in. | Use the code in Paperclip and ignore `/connect`. |
+| Two different Codex codes (Paperclip and `/connect`) | Deploys made before 2026-11-10 have an old `/connect` helper that also starts a sign-in. | Use the code in Paperclip and ignore `/connect`. To remove the helper, copy `CONNECT_HELPER_JS` from [`connect.mjs`](connect.mjs) into the Paperclip service variable and redeploy. |
 | Agent process is killed, or the service restarts during runs | Not enough memory for the CLI. | Give the Paperclip service 2 GB RAM or more. |
 | Sign-in links or redirects point to the wrong host | `PAPERCLIP_PUBLIC_URL` does not match the URL you use. | Set it to your custom domain, with `https://`. |
 
@@ -154,7 +154,7 @@ Migrations apply on boot (`PAPERCLIP_MIGRATION_AUTO_APPLY=true`). Railway stops 
 | `spec.py` | Services, variables, start command (single source of truth) |
 | `build_source.py` | Creates the live source project |
 | `apply_live.py` | Re-applies `spec.py` to the live source service |
-| `connect.mjs` | The older `/connect` helper and the Claude Code launcher |
+| `connect.mjs` | Front proxy (port 3100), Claude Code / Codex launchers, `/connect` pointer page |
 | `repair.py` | Restores literals stripped by `templateGenerate`, writes the template into Auromations, asserts read-back |
 | `deploy_as_stranger.py` | `templateDeployV2` into a fresh project |
 | `test/journey.sh <url>` | Browser claim, second-claim refusal, company CRUD, second-user isolation |

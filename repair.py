@@ -14,6 +14,7 @@ from spec import IMAGE, PG_IMAGE, PAPERCLIP_VARS, PG_VARS, PAPERCLIP_DEPLOY  # n
 
 WORKSPACE = "fc4796db-2c6c-4354-a564-d4a1d900af53"  # Auromations
 NAME = "Paperclip (Official Image)"
+CODE = "paperclip-official-1"
 ICONS = {
     # 512px PNG pinned to the release tag, verified image/png.
     "Paperclip": f"https://raw.githubusercontent.com/paperclipai/paperclip/v{IMAGE.rsplit(':', 1)[1]}/ui/public/android-chrome-512x512.png",
@@ -43,8 +44,10 @@ def main():
     if template_id != "new":
         # Updating: start from the template's own config; the generated one carries source
         # service ids, which the server rejects as "ID collision".
-        live = rw.gql("query($id: String!) { template(id: $id) { serializedConfig canvasConfig } }",
-                      {"id": template_id})["template"]
+        # template(id:) answers "Not Authorized" since 2026-11; template(code:) still works.
+        live = rw.gql("query($c: String!) { template(code: $c) { id serializedConfig canvasConfig } }",
+                      {"c": CODE})["template"]
+        assert live["id"] == template_id, (live["id"], template_id)
         config, canvas = live["serializedConfig"], live["canvasConfig"]
     else:
         canvas = {}

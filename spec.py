@@ -28,8 +28,9 @@ PAPERCLIP_VARS = {
     # No HOST override: the server maps bind to lan (0.0.0.0) regardless (verified in the
     # boot banner with HOST=::), and the public edge + healthcheck reach it fine.
     # Paperclip listens on PORT=3101 (Railway healthchecks PORT, so /api/health hits Paperclip
-    # directly). The /connect helper (connect.mjs) listens on 3100, the domain's target port,
-    # and proxies everything except /connect to Paperclip, websockets included.
+    # directly). connect.mjs listens on 3100, the domain's target port, and proxies everything
+    # to Paperclip, websockets included. Kept as a proxy (not dropped) so existing deploys and the
+    # agent-computer template keep the same ports; /connect is only a pointer page since 1023.0.
     "PORT": "3101",
     "CONNECT_PORT": "3100",
     "DATABASE_URL": "${{Postgres.DATABASE_URL}}",
@@ -56,7 +57,7 @@ PAPERCLIP_VARS = {
 PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.mjs").read_text()
 
 # Railway discards the image ENTRYPOINT, so tini + docker-entrypoint.sh (volume chown, gosu to
-# node) are called explicitly. The helper ships in a variable to keep the official image
+# node) are called explicitly. The proxy ships in a variable to keep the official image
 # unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
 START_COMMAND = (
     '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'

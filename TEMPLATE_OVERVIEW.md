@@ -27,6 +27,8 @@ It boots in `authenticated` mode with `private` exposure, so every page needs a 
 
 ### Implementation Details
 
+Step-by-step guide with screenshots and troubleshooting: https://github.com/hmseeb/paperclip-railway-template#readme
+
 **Claiming your instance (do this first)**
 
 1. When the deploy goes green, open the Paperclip service's public URL.
@@ -37,11 +39,11 @@ Claim it right away. Until someone claims it, the first signed-in user on the UR
 
 **Connecting agents (no terminal needed)**
 
-Paperclip's subscription sign-in normally asks you to run a command on the server. This template adds a small page at `https://your-app.up.railway.app/connect` (instance admin only) that does it for you:
+Paperclip signs in to your subscription from the browser. In onboarding or an agent's model settings:
 
-- **Claude subscription:** run `claude setup-token` on your own computer, paste the `sk-ant-oat...` token on `/connect` and save. Then in Paperclip choose Claude, Subscription, and click Connect. The token stays on your volume. Usage bars are not shown for setup-token connections.
-- **Codex (ChatGPT subscription):** in Paperclip choose Codex, Subscription. Within a few seconds `/connect` shows a link and a one-time code. Open the link, enter the code, approve, and Paperclip connects on its own.
-- **API keys:** in Paperclip's Connect step, click **Use API key instead** under the provider tile and paste the key. No `/connect` needed.
+- **Claude subscription:** click **Claude**. Open the **Sign in to Claude** link, approve, paste the authorization code and click **Submit code**, then **Connect**. Paperclip makes a long-lived `claude setup-token` token, so the connection does not expire overnight.
+- **Codex (ChatGPT subscription):** click **OpenAI**. Open the link, enter the code that Paperclip shows, approve, then click **Connect**.
+- **API keys:** click **Use API key instead** under the provider tiles and paste the key.
 
 The Claude Code, Codex, OpenCode, Gemini and Kimi CLIs are already installed in the image.
 
@@ -66,9 +68,8 @@ Change the Paperclip service image tag to a newer release from https://github.co
 - *"Someone else has already claimed this instance":* another account claimed it first. If that was not you, delete the project and deploy again, then claim immediately.
 - *No claim option on the setup screen:* the instance is already claimed (`/api/health` shows `"bootstrapStatus":"ready"`). Sign in with the admin account.
 - *Health shows a `database_backup_missing` warning right after deploy:* normal. The first automatic backup runs within the hour.
-- *Agents fail to start:* the agent has no model connection. Connect one from the agent's settings, using `/connect` for subscriptions.
-- *`/connect` shows no Codex code:* click the Codex tile in Paperclip first; the code appears once Paperclip starts the sign-in. If it says failed or expired, click the tile again.
-- *`/connect` says Anthropic rejected the token:* create a fresh one with `claude setup-token` and paste it again.
+- *Agents fail to start:* the agent has no model connection. Connect one from the agent's settings.
+- *The sign-in code is rejected or expired:* each code works once and for a few minutes. Click **Start sign-in again** and use the new link.
 
 ## Why Deploy Paperclip on Railway?
 
