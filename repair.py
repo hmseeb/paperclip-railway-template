@@ -44,7 +44,7 @@ def main():
     if template_id != "new":
         # Updating: start from the template's own config; the generated one carries source
         # service ids, which the server rejects as "ID collision".
-        # template(id:) answers "Not Authorized" since 2026-11; template(code:) still works.
+        # template(id:) gave "Not Authorized" on 2026-11-10 while template(code:) worked; use the code.
         live = rw.gql("query($c: String!) { template(code: $c) { id serializedConfig canvasConfig } }",
                       {"c": CODE})["template"]
         assert live["id"] == template_id, (live["id"], template_id)

@@ -14,7 +14,7 @@ import rw  # noqa: E402
 TEMPLATE_ID = sys.argv[1] if len(sys.argv) > 1 else "dae7b86e-7cdb-4d30-a4c3-1342684fb4e6"  # optional: scratch template id
 WORKSPACE_ID = "d10da65a-297f-4ba4-8cef-2fa9bb45fdef"  # My Projects: Auromations cannot create projects while billing is UNPAID
 
-# template(id:) answers "Not Authorized" since 2026-11; look up by code.
+# template(id:) gave "Not Authorized" on 2026-11-10 while template(code:) worked; use the code.
 CODE = sys.argv[2] if len(sys.argv) > 2 else "paperclip-official-1"
 config = rw.gql(
     "query($c: String!) { template(code: $c) { serializedConfig } }",
