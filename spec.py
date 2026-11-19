@@ -3,9 +3,13 @@ build_source.py writes it to the live source project; repair.py writes it into t
 """
 import pathlib
 
-# Official upstream image, release v2026.1023.0 (latest stable on 2026-10-25). Start-command
-# dependencies (tini, docker-entrypoint.sh, server paths, SDK/codex binary globs) checked identical.
-IMAGE = "ghcr.io/paperclipai/paperclip:2026.1023.0"
+# Official upstream image on :latest (hybrid policy): on 2026-11-20 :latest had the same digest
+# as v2026.1117.0, the newest stable release; canary is a separate tag. Paperclip runs its own
+# migrations on boot (PAPERCLIP_MIGRATION_AUTO_APPLY). test/spec_test.py checks the start command
+# against the newest release's ENTRYPOINT/CMD; rerun it before republishing.
+IMAGE = "ghcr.io/paperclipai/paperclip:latest"
+# Git ref for the listing icon (a real tag, so the URL never moves).
+ICON_REF = "v2026.1023.0"
 PG_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:17"
 
 PG_VARS = {
@@ -52,6 +56,11 @@ PAPERCLIP_VARS = {
     # Falls back to BETTER_AUTH_SECRET, but unset makes the boot banner say
     # "Agent JWT missing (run npx paperclipai onboard)", which misleads deployers.
     "PAPERCLIP_AGENT_JWT_SECRET": "${{secret(64)}}",
+    # Upstream bug paperclipai/paperclip#18557 (open on 2026-11-20): unset, the server checks
+    # ACPX provider packages against /app/server, which the image's pnpm layout never passes,
+    # so every new Runner agent stays "verifying" (acpx_runtime_unavailable). The image's own
+    # provider pack passes; real runs use it too (verified with a haiku run on 2026.1117.0).
+    "PAPERCLIP_ACPX_PROVIDER_PACKAGE_ROOT": "/opt/paperclip-runner/provider-pack",
 }
 
 PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.mjs").read_text()
@@ -60,7 +69,7 @@ PAPERCLIP_VARS["CONNECT_HELPER_JS"] = (pathlib.Path(__file__).parent / "connect.
 # node) are called explicitly. The proxy ships in a variable to keep the official image
 # unmodified; it restarts in a loop if it ever dies, Paperclip stays the container's main process.
 START_COMMAND = (
-    '/usr/bin/tini -- docker-entrypoint.sh /bin/sh -c "'
+    '/usr/bin/tini -s -- docker-entrypoint.sh /bin/sh -c "'
     'printenv CONNECT_HELPER_JS > /tmp/connect.mjs && node /tmp/connect.mjs --write-patch /tmp/usage-patch.mjs; '
     '(while true; do node /tmp/connect.mjs; sleep 2; done) & '
     # Newest Claude Code + Codex on the volume, installed in the background each boot: new models
@@ -68,14 +77,14 @@ START_COMMAND = (
     # root-owned, so it cannot self-update. PATH prefers it once present, else the image's.
     '(npm i -g --prefix /paperclip/.cli @anthropic-ai/claude-code@latest @openai/codex@latest > /tmp/cli-update.log 2>&1 '
     '&& echo [cli] updated: $(/paperclip/.cli/bin/claude --version), $(/paperclip/.cli/bin/codex --version) || echo [cli] update failed, see /tmp/cli-update.log) & '
-    # Agents run Claude Code through Paperclip's bundled Agent SDK binary (2.1.263 in 2026.916.1; SDK 0.3.286 in 2026.1012.0 and 2026.1023.0),
-    # whose env allowlist drops CLAUDE_CODE_EXECUTABLE, so point the bundled binary itself at the
-    # launcher. /app is node-owned and container-local: redone on every boot.
-    'for f in /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-linux-*/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude; do ln -sf /tmp/claude-launcher $f; done; '
-    # Codex agents: codex-acp runs @openai/codex's vendored binary (0.153.4 in 2026.916.1, 0.160.0 in 2026.1012.0 and 2026.1023.0).
-    'for f in /app/node_modules/.pnpm/@openai+codex@*-linux-*/node_modules/@openai/codex/vendor/*/bin/codex; do ln -sf /tmp/codex-launcher $f; done; '
+    # No symlinks over the bundled Agent SDK / codex binaries any more (done up to 2026.1023.0):
+    # since 2026.1106.0 agents run on the Paperclip Runner, whose session.open verifies the
+    # installed provider files and rejects a swapped binary (admission_installation). The
+    # Runner's own SDK ships Claude Code 2.1.286 in 2026.1117.0, new enough for Opus 5.5.
+    # The volume CLI above still serves the legacy CLI engine and the shell via PATH.
     'export PATH=/paperclip/.cli/bin:$PATH; '
-    'exec node --import /tmp/usage-patch.mjs --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js"'
+    # Same entry as the image CMD (bundled runtime since 2026.1117.0), plus the usage preload.
+    'exec node --import /tmp/usage-patch.mjs server/dist-runtime/index.mjs"'
 )
 
 PAPERCLIP_DEPLOY = {

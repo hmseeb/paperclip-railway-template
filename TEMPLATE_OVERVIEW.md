@@ -4,7 +4,7 @@ Paperclip is an open-source control plane for running a company staffed by AI ag
 
 ## About Hosting Paperclip
 
-This template runs the official `ghcr.io/paperclipai/paperclip` image (release 2026.1023.0, no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
+This template runs the official `ghcr.io/paperclipai/paperclip` image (`latest`, which tracks the newest stable release; no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
 
 It boots in `authenticated` mode with `private` exposure, so every page needs a login, and the first admin is claimed straight from the browser. No CLI and no setup tokens.
 

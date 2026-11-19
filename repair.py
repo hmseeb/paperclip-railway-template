@@ -10,14 +10,14 @@ Usage: repair.py <templateId|new> [generated.json]
 import json, pathlib, sys, uuid
 sys.path.insert(0, str(pathlib.Path("~/.claude/skills/create-template-for-railway/scripts").expanduser()))
 import rw  # noqa: E402
-from spec import IMAGE, PG_IMAGE, PAPERCLIP_VARS, PG_VARS, PAPERCLIP_DEPLOY  # noqa: E402
+from spec import IMAGE, ICON_REF, PG_IMAGE, PAPERCLIP_VARS, PG_VARS, PAPERCLIP_DEPLOY  # noqa: E402
 
 WORKSPACE = "fc4796db-2c6c-4354-a564-d4a1d900af53"  # Auromations
 NAME = "Paperclip (Official Image)"
 CODE = "paperclip-official-1"
 ICONS = {
     # 512px PNG pinned to the release tag, verified image/png.
-    "Paperclip": f"https://raw.githubusercontent.com/paperclipai/paperclip/v{IMAGE.rsplit(':', 1)[1]}/ui/public/android-chrome-512x512.png",
+    "Paperclip": f"https://raw.githubusercontent.com/paperclipai/paperclip/{ICON_REF}/ui/public/android-chrome-512x512.png",
     "Postgres": "https://devicons.railway.app/i/postgresql.svg",
 }
 DESCRIPTIONS = {
