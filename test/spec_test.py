@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Start command must launch what the image itself launches.
 
-Usage: spec_test.py [upstream-Dockerfile]. Without an argument it fetches the Dockerfile of
-the newest stable release (the one :latest points at) with `gh api`.
+Usage: spec_test.py [upstream-Dockerfile]. Without an argument it fetches, with `gh api`, the
+Dockerfile of the release spec.IMAGE is pinned to. To bump: set IMAGE to the new release tag,
+run this test against it (it fails until the start command and env match), then test-deploy.
 """
 import json, pathlib, re, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -11,7 +12,7 @@ import spec  # noqa: E402
 if len(sys.argv) > 1:
     dockerfile = pathlib.Path(sys.argv[1]).read_text()
 else:
-    tag = subprocess.check_output(["gh", "api", "repos/paperclipai/paperclip/releases/latest", "--jq", ".tag_name"], text=True).strip()
+    tag = "v" + spec.IMAGE.rsplit(":", 1)[1]
     dockerfile = subprocess.check_output(["gh", "api", "-H", "Accept: application/vnd.github.raw",
                                           f"repos/paperclipai/paperclip/contents/Dockerfile?ref={tag}"], text=True)
 
@@ -23,8 +24,10 @@ if not spec.START_COMMAND.startswith(" ".join(entrypoint) + " "):
 want_exec = "exec " + " ".join([cmd[0], "--import", "/tmp/usage-patch.mjs", *cmd[1:]]) + '"'
 if not spec.START_COMMAND.endswith(want_exec):
     fails.append(f"cmd: start command does not end with {want_exec!r}")
-if not spec.IMAGE.endswith(":latest"):
-    fails.append(f"image: {spec.IMAGE} is not :latest (hybrid policy, :latest == newest stable)")
+# Pinned, never floating: the start command and env above depend on image internals that
+# change between releases (2026.1117.0 alone moved CMD, tini flags and the provider check).
+if not re.fullmatch(r"ghcr\.io/paperclipai/paperclip:\d{4}\.\d+\.\d+", spec.IMAGE):
+    fails.append(f"image: {spec.IMAGE} is not pinned to a release tag")
 if "latest" in getattr(spec, "ICON_REF", "latest"):
     fails.append("icon must be pinned to a real git ref")
 # Since 2026.1106.0 agents default to the Paperclip Runner, whose session.open verifies the

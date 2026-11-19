@@ -4,7 +4,7 @@ Paperclip is an open-source control plane for running a company staffed by AI ag
 
 ## About Hosting Paperclip
 
-This template runs the official `ghcr.io/paperclipai/paperclip` image (`latest`, which tracks the newest stable release; no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
+This template runs the official `ghcr.io/paperclipai/paperclip` image, pinned to release 2026.1117.0 (no wrapper repo) next to a Railway Postgres 17 database. Both services keep their data on volumes: Postgres holds companies, agents, tasks and users; the `/paperclip` volume holds agent workspaces, uploaded files, the local secrets key and hourly database backups.
 
 It boots in `authenticated` mode with `private` exposure, so every page needs a login, and the first admin is claimed straight from the browser. No CLI and no setup tokens.
 
@@ -47,7 +47,9 @@ Paperclip signs in to your subscription from the browser. In onboarding or an ag
 
 The Claude Code, Codex, OpenCode, Gemini and Kimi CLIs are already installed in the image.
 
-**Newest Claude models:** on every boot the template installs the latest Claude Code onto your volume and points Paperclip's agents at it, so new Claude models work as soon as Anthropic ships them. If a new model is not in Paperclip's model list yet, type its full ID (for example `claude-opus-5-5`) in the Model box, choose **Use manual model**, and save.
+**Updating Paperclip:** the image is pinned on purpose, because the template's start command and settings depend on the layout of that exact release. New releases are tested and bumped in this template. Existing deploys can move by redeploying from the template, or by setting the Paperclip service's image to the tag the template now uses.
+
+**Newest Claude models:** agents use the Claude Code that ships with the pinned Paperclip release. The template also installs the latest Claude Code CLI onto your volume on every boot for the container shell. If a new model is not in Paperclip's model list yet, type its full ID (for example `claude-opus-5-5`) in the Model box, choose **Use manual model**, and save.
 
 **Variables you might change**
 

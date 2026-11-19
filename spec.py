@@ -3,11 +3,12 @@ build_source.py writes it to the live source project; repair.py writes it into t
 """
 import pathlib
 
-# Official upstream image on :latest (hybrid policy): on 2026-11-20 :latest had the same digest
-# as v2026.1117.0, the newest stable release; canary is a separate tag. Paperclip runs its own
-# migrations on boot (PAPERCLIP_MIGRATION_AUTO_APPLY). test/spec_test.py checks the start command
-# against the newest release's ENTRYPOINT/CMD; rerun it before republishing.
-IMAGE = "ghcr.io/paperclipai/paperclip:latest"
+# Official upstream image, pinned to release v2026.1117.0 (newest stable on 2026-11-20, digest
+# sha256:bdf38d10). Never :latest: START_COMMAND, the dropped SDK symlinks and
+# PAPERCLIP_ACPX_PROVIDER_PACKAGE_ROOT depend on image internals that 1117.0 itself changed.
+# To bump: set the new tag, run test/spec_test.py (checks ENTRYPOINT/CMD/provider pack against
+# that release's Dockerfile), then test-deploy with a real agent run before publishing.
+IMAGE = "ghcr.io/paperclipai/paperclip:2026.1117.0"
 # Git ref for the listing icon (a real tag, so the URL never moves).
 ICON_REF = "v2026.1023.0"
 PG_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:17"
